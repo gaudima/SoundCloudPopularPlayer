@@ -1,2 +1,7 @@
 # SoundCloudPopularPlayer
-Android project
+Плеер популярных песен c soundcloud.
+**Warning**
+Не доделан до конца.
+Куча крашей.
+Нужно разобраться с тем как правильно работать с сервисами под андроид.
+**Warning**

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+        <com.android.volley.toolbox.NetworkImageView
+            android:id="@+id/musicPlayerAlbumArt"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_alignParentBottom="true"
+
+            android:background="#000000"
+            android:alpha="0.7" >
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/musicPlayerSongName"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/musicPlayerArtistName"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_horizontal"
+                android:layout_marginTop="16dp">
+
+                <ImageButton
+                    android:id="@+id/musicPlayerPrevious"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:src="@drawable/ic_skip_previous_white_48dp"
+                    android:background="@drawable/player_button_ripple"/>
+                <ImageButton
+                    android:id="@+id/musicPlayerPlayPause"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:src="@drawable/ic_play_arrow_white_48dp"
+                    android:background="@drawable/player_button_ripple"/>
+                <ImageButton
+                    android:id="@+id/musicPlayerNext"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:src="@drawable/ic_skip_next_white_48dp"
+                    android:background="@drawable/player_button_ripple"/>
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/musicPlayerSeekBar"
+                android:progressDrawable="@drawable/player_seekbar_color"
+                android:minHeight="2dp"
+                android:maxHeight="2dp"
+                android:layout_width="match_parent"
+                android:layout_height="60dp" />
+
+        </LinearLayout>
+
+</RelativeLayout>
