@@ -65,7 +65,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
             musicPlayerService.setProgressListener(new MusicPlayerService.ProgressListener() {
                 @Override
                 public void onProgress(int progress, int duration, boolean playing) {
-                    if (playing && !seeking) {
+                    if (!seeking) {
                         seekBar.setMax(duration);
                         seekBar.setProgress(progress);
                     }
@@ -98,7 +98,6 @@ public class MusicPlayerActivity extends AppCompatActivity {
             playpause.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    seekBar.setProgress(0);
                     musicPlayerService.playPause();
                 }
             });

@@ -25,7 +25,6 @@ public class PopularSongsActivity extends AppCompatActivity {
     private PopularSongsAdapter adapter;
     private LinearLayoutManager layoutManager;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private MenuItem playerPageButton;
 
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +34,6 @@ public class PopularSongsActivity extends AppCompatActivity {
 
         recyclerView = (RecyclerView) findViewById(R.id.popularSongsView);
         swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeRefreshLayout);
-        playerPageButton = (MenuItem) findViewById(R.id.player);
         recyclerView.setHasFixedSize(true);
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
@@ -94,13 +92,14 @@ public class PopularSongsActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
+        adapter.setPlayerPage(menu.findItem(R.id.playerPageButton));
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
-            case R.id.player:
+            case R.id.playerPageButton:
                 Intent i = new Intent(this, MusicPlayerActivity.class);
                 startActivity(i);
                 return true;

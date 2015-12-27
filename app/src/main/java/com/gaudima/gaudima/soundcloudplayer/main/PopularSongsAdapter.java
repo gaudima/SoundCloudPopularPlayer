@@ -11,6 +11,7 @@ import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -35,6 +36,8 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
     private Intent musicPlayerServiceIntent;
     private MusicPlayerService musicPlayerService;
     private Context context;
+    private MenuItem playerPage;
+    private PopularSongsActivity popularSongsActivity;
 
     public boolean loading = false;
 
@@ -49,11 +52,13 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
                 @Override
                 public void onStarted(int index) {
                     notifyItemChanged(index);
+                    playerPage.setVisible(true);
                 }
 
                 @Override
                 public void onStopped(int index) {
                     notifyItemChanged(index);
+                    playerPage.setVisible(false);
                 }
             });
             musicPlayerService.closeNotification();
@@ -74,6 +79,10 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
             context.startService(musicPlayerServiceIntent);
         }
         Log.d(TAG, "constructor");
+    }
+
+    public void setPlayerPage(MenuItem playerPage) {
+        this.playerPage = playerPage;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -187,7 +196,7 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Log.d(TAG, error.getMessage());
+                        //Log.d(TAG, error.getMessage());
                     }
                 }
         ));

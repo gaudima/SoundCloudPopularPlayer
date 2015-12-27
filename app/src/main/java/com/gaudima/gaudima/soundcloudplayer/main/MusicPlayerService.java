@@ -74,9 +74,13 @@ public class MusicPlayerService extends Service implements
     Intent playPause;
     Intent previous;
     Intent next;
+    Intent stopService;
+    Intent popularSings;
     PendingIntent playPausePending;
     PendingIntent previousPending;
     PendingIntent nextPending;
+    PendingIntent stopServicePending;
+    PendingIntent popularSongsPending;
     NotificationManager notificationManager;
 
     private final Runnable r = new Runnable() {
@@ -96,12 +100,17 @@ public class MusicPlayerService extends Service implements
         playPause = new Intent(this, MusicPlayerService.class);
         previous = new Intent(this, MusicPlayerService.class);
         next = new Intent(this, MusicPlayerService.class);
+        stopService = new Intent(this, MusicPlayerService.class);
+        popularSings = new Intent(this, PopularSongsActivity.class);
         playPause.setAction(PLAYPAUSE);
         previous.setAction(PREVIOUS);
         next.setAction(NEXT);
+        stopService.setAction(STOPSERVICE);
         playPausePending = PendingIntent.getService(this, 0, playPause, 0);
         previousPending = PendingIntent.getService(this, 0, previous, 0);
         nextPending = PendingIntent.getService(this, 0, next, 0);
+        stopServicePending = PendingIntent.getService(this, 0, stopService, 0);
+        popularSongsPending = PendingIntent.getActivity(this, 0, popularSings, 0);
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         Log.d(TAG, "onCreate");
     }
@@ -129,6 +138,7 @@ public class MusicPlayerService extends Service implements
                     getNext();
                     break;
                 case STOPSERVICE:
+                    stopForeground(true);
                     stopService(new Intent(getApplicationContext(), MusicPlayerService.class));
             }
         }
@@ -247,36 +257,50 @@ public class MusicPlayerService extends Service implements
 
     public void openNotification() {
         background = true;
-        upadteNotification();
+        startForeground();
+    }
+
+    void startForeground() {
+        if(background && player.isPlaying()) {
+            startForeground(100, getNotification());
+        } else {
+            stopService(new Intent(this, MediaPlayer.class));
+        }
+    }
+
+    public Notification getNotification() {
+        try {
+            RemoteViews views = new RemoteViews(getPackageName(), R.layout.notification);
+            Notification notification = new Notification.Builder(this)
+                    .setSmallIcon(R.drawable.ic_play_arrow_white_48dp)
+                    .setContent(views)
+                    .setContentIntent(popularSongsPending)
+                    .build();
+
+            views.setTextViewText(R.id.notificationSongName, playlist.getJSONObject(currentSong)
+                    .getString("title"));
+            views.setTextViewText(R.id.notificationArtist, playlist.getJSONObject(currentSong)
+                    .getJSONObject("user").getString("username"));
+            if (player.isPlaying()) {
+                views.setImageViewResource(R.id.notificationPlayPause, R.drawable.ic_pause_black_48dp);
+            } else {
+                views.setImageViewResource(R.id.notificationPlayPause, R.drawable.ic_play_arrow_black_48dp);
+            }
+
+            views.setOnClickPendingIntent(R.id.notificationPrevious, previousPending);
+            views.setOnClickPendingIntent(R.id.notificationPlayPause, playPausePending);
+            views.setOnClickPendingIntent(R.id.notificationNext, nextPending);
+            views.setOnClickPendingIntent(R.id.notificationStopService, stopServicePending);
+            return notification;
+        } catch(Exception e) {
+            Log.d(TAG, e.getMessage());
+        }
+        return null;
     }
 
     public void upadteNotification() {
         if(background) {
-            try {
-                RemoteViews views = new RemoteViews(getPackageName(), R.layout.notification);
-                Notification notification = new Notification.Builder(this)
-                        .setSmallIcon(R.drawable.ic_play_arrow_white_48dp)
-                        .setContent(views)
-                        .build();
-
-                views.setTextViewText(R.id.notificationSongName, playlist.getJSONObject(currentSong)
-                        .getString("title"));
-                views.setTextViewText(R.id.notificationArtist, playlist.getJSONObject(currentSong)
-                        .getJSONObject("user").getString("username"));
-                if(player.isPlaying()) {
-                    views.setImageViewResource(R.id.notificationPlayPause, R.drawable.ic_pause_black_48dp);
-                } else {
-                    views.setImageViewResource(R.id.notificationPlayPause, R.drawable.ic_play_arrow_black_48dp);
-                }
-
-                views.setOnClickPendingIntent(R.id.notificationPrevious, previousPending);
-                views.setOnClickPendingIntent(R.id.notificationPlayPause, playPausePending);
-                views.setOnClickPendingIntent(R.id.notificationNext, nextPending);
-
-                notificationManager.notify(100, notification);
-            } catch(Exception e) {
-                Log.d(TAG, e.getMessage());
-            }
+            notificationManager.notify(100, getNotification());
         }
     }
 
@@ -301,18 +325,12 @@ public class MusicPlayerService extends Service implements
     }
 
     public void closeNotification() {
-        notificationManager.cancel(100);
+        stopForeground(true);
         background = false;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
-        if(!player.isPlaying()) {
-            stopService(new Intent(getApplicationContext(), MusicPlayerService.class));
-        } else {
-            background = true;
-            upadteNotification();
-        }
         return false;
     }
 
