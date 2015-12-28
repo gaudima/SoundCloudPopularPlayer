@@ -6,6 +6,5 @@
         android:id="@+id/playerPageButton"
         android:icon="@drawable/ic_play_arrow_white_48dp"
         android:title="player"
-        app:showAsAction="always"
-        android:visible="false" />
+        app:showAsAction="always" />
 </menu>

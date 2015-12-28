@@ -20,7 +20,7 @@ import com.gaudima.gaudima.soundcloudplayer.R;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class PopularSongsActivity extends AppCompatActivity {
+public class PopularSongsActivity extends MusicPlayerServiceBindedActivity {
     private static final String TAG = "PopularSongsActivity";
     private static final String DATA = "data";
     private RecyclerView recyclerView;
@@ -28,8 +28,8 @@ public class PopularSongsActivity extends AppCompatActivity {
     private LinearLayoutManager layoutManager;
     private SwipeRefreshLayout swipeRefreshLayout;
 
-
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
         setContentView(R.layout.activity_popular_songs);
@@ -89,12 +89,6 @@ public class PopularSongsActivity extends AppCompatActivity {
         });
     }
 
-//    @Override
-//    public Object onRetainCustomNonConfigurationInstance() {
-//        Log.d(TAG, "retain adapter");
-//        return adapter;
-//    }
-
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -104,7 +98,6 @@ public class PopularSongsActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        adapter.setPlayerPage(menu.findItem(R.id.playerPageButton));
         return true;
     }
 
@@ -118,25 +111,12 @@ public class PopularSongsActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        adapter.closeNotification();
-    }
-
-    @Override
-    protected void onPause() {
-        adapter.openNotification();
-        super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        adapter.unbindFromMusicPlyerService();
         Log.d(TAG, "onDestroy");
-        adapter.unbindFromMusicPlayerService();
         super.onDestroy();
     }
 }

@@ -4,8 +4,6 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.app.TaskStackBuilder;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
@@ -16,17 +14,14 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.support.annotation.Nullable;
 
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
-import android.widget.TextView;
 
 import com.gaudima.gaudima.soundcloudplayer.R;
 import com.gaudima.gaudima.soundcloudplayer.api.Api;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 public class MusicPlayerService extends Service implements
         MediaPlayer.OnPreparedListener,
@@ -61,8 +56,9 @@ public class MusicPlayerService extends Service implements
     public final static int BUFFERING = 0;
     public final static int PLAYING = 1;
     public final static int STOPPED = 2;
+    public final static int INITIAL = -1;
 
-    private int currentState = STOPPED;
+    private int currentState = INITIAL;
 
     private ProgressListener progressListener;
     private InfoListener infoListener;
@@ -71,9 +67,10 @@ public class MusicPlayerService extends Service implements
     private MBinder binder = new MBinder();
     private MediaPlayer player;
     private JSONArray playlist;
-    private int currentSong = -1;
+    private int currentSong = 0;
     private Handler handler = new Handler();
     private boolean background = false;
+    private int activitiesVisible = 0;
 
     Intent playPause;
     Intent previous;
@@ -199,16 +196,16 @@ public class MusicPlayerService extends Service implements
 
     public void requestProgress() {
         if(progressListener != null) {
-            if(currentState != BUFFERING) {
+            if(currentState == PLAYING) {
                 progressListener.onProgress(player.getCurrentPosition(), player.getDuration(), player.isPlaying());
             } else {
-                progressListener.onProgress(0, 10, true);
+                progressListener.onProgress(0, 1000, false);
             }
         }
     }
 
     public void requestStateInfo() {
-        if(currentSong != -1) {
+        if(stateListener != null) {
             stateListener.onStateChanged(currentSong, currentState);
         }
     }
@@ -223,27 +220,46 @@ public class MusicPlayerService extends Service implements
             ));
             player.prepareAsync();
             requestInfo();
-            upadteNotification();
+            updateNotification();
         } catch(Exception e) {
             Log.d(TAG, e.getMessage());
         }
     }
 
-    public void setSong(int index) {
-        if(currentSong != -1) {
-            currentState = STOPPED;
-            stateListener.onStateChanged(currentSong, currentState);
+    public void addVisibleActivity() {
+        activitiesVisible += 1;
+        Log.d(TAG, "addVisibleActivities");
+        if(activitiesVisible == 1) {
+            closeNotification();
         }
+    }
+
+    public void removeVisibleActivity() {
+        activitiesVisible -= 1;
+        Log.d(TAG, "removeVisibleActivities");
+        if(activitiesVisible <= 0) {
+            openNotification();
+        }
+    }
+
+    public void setSong(int index) {
+        currentState = STOPPED;
+        stateListener.onStateChanged(currentSong, currentState);
         currentSong = index;
     }
 
     public void playPause() {
-        if(player.isPlaying()) {
+        if(currentState == INITIAL) {
+            currentState = BUFFERING;
+            playSong();
+        } else if(currentState == PLAYING) {
+            currentState = STOPPED;
             player.pause();
         } else {
+            currentState = PLAYING;
             player.start();
         }
-        upadteNotification();
+        updateNotification();
     }
 
     public void seekTo(int progress) {
@@ -251,13 +267,15 @@ public class MusicPlayerService extends Service implements
     }
 
     public void pause() {
-        if(player.isPlaying()) {
+        if(currentState == PLAYING) {
+            currentState = STOPPED;
             player.pause();
         }
     }
 
     public void play() {
-        if(!player.isPlaying()) {
+        if(currentState == STOPPED) {
+            currentState = PLAYING;
             player.start();
         }
     }
@@ -266,11 +284,15 @@ public class MusicPlayerService extends Service implements
         return currentSong;
     }
 
+    public int getState() {
+        return currentState;
+    }
+
     public void unsetProgressListener() {
         progressListener = null;
     }
 
-    public void openNotification() {
+    private void openNotification() {
         background = true;
         startForeground();
     }
@@ -283,7 +305,7 @@ public class MusicPlayerService extends Service implements
         }
     }
 
-    public Notification getNotification() {
+    private Notification getNotification() {
         try {
             RemoteViews views = new RemoteViews(getPackageName(), R.layout.notification);
             Notification notification = new Notification.Builder(this)
@@ -313,7 +335,7 @@ public class MusicPlayerService extends Service implements
         return null;
     }
 
-    public void upadteNotification() {
+    private void updateNotification() {
         if(background) {
             notificationManager.notify(100, getNotification());
         }
@@ -325,7 +347,7 @@ public class MusicPlayerService extends Service implements
         currentState = PLAYING;
         stateListener.onStateChanged(currentSong, currentState);
         mp.start();
-        upadteNotification();
+        updateNotification();
     }
 
     @Override
@@ -340,7 +362,7 @@ public class MusicPlayerService extends Service implements
         return binder;
     }
 
-    public void closeNotification() {
+    private void closeNotification() {
         stopForeground(true);
         background = false;
     }

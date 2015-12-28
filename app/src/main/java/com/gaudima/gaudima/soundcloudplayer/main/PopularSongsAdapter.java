@@ -4,19 +4,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.res.Resources;
-import android.media.MediaPlayer;
 import android.os.IBinder;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
 import com.android.volley.Response;
@@ -37,7 +31,6 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
     private Intent musicPlayerServiceIntent;
     private MusicPlayerService musicPlayerService;
     private Context context;
-    private MenuItem playerPage;
     private boolean boundToMusicPlayerService = false;
 
     public boolean loading = false;
@@ -55,7 +48,6 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
                     try {
                         data.getJSONObject(index).put("playing_status", state);
                         notifyItemChanged(index);
-                        playerPage.setVisible(true);
                     } catch (Exception e) {
 
                     }
@@ -64,7 +56,6 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
             if(data.length() != 0) {
                 musicPlayerService.requestStateInfo();
             }
-            musicPlayerService.closeNotification();
         }
 
         @Override
@@ -83,10 +74,6 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
             context.startService(musicPlayerServiceIntent);
         }
         Log.d(TAG, "constructor");
-    }
-
-    public void setPlayerPage(MenuItem playerPage) {
-        this.playerPage = playerPage;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -212,30 +199,12 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
         ));
     }
 
-    public void unbindFromMusicPlayerService() {
-        if(boundToMusicPlayerService) {
-            context.unbindService(musicPlayerServiceConnection);
-        }
-    }
-
-    public void openNotification() {
-        if(boundToMusicPlayerService) {
-            musicPlayerService.openNotification();
-        }
-    }
-
-    public void closeNotification() {
-        if(boundToMusicPlayerService) {
-            musicPlayerService.closeNotification();
-        }
-    }
-
     public void setData(JSONArray data) {
         this.data = data;
-        if(musicPlayerService != null) {
-            if(musicPlayerService.getCurrentSong() != -1) {
-                playerPage.setVisible(true);
-            }
+    }
+    public void unbindFromMusicPlyerService() {
+        if(boundToMusicPlayerService) {
+            context.unbindService(musicPlayerServiceConnection);
         }
     }
 

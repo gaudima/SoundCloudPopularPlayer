@@ -21,7 +21,7 @@ import com.gaudima.gaudima.soundcloudplayer.api.Api;
 
 import org.json.JSONObject;
 
-public class MusicPlayerActivity extends AppCompatActivity {
+public class MusicPlayerActivity extends MusicPlayerServiceBindedActivity {
     private final static String TAG = "MusicPlayerActivity";
 
     private NetworkImageView albumArt;
@@ -34,111 +34,100 @@ public class MusicPlayerActivity extends AppCompatActivity {
     private boolean currentlyPlaying = false;
     private boolean seeking = false;
 
-    private Intent musicPlayerServiceIntent;
-    private MusicPlayerService musicPlayerService;
-    private ServiceConnection musicPlayerServiceConnection = new ServiceConnection(){
-
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            MusicPlayerService.MBinder binder = (MusicPlayerService.MBinder)service;
-            musicPlayerService = binder.getService();
-            musicPlayerService.setInfoListener(new MusicPlayerService.InfoListener() {
-                @Override
-                public void onInfo(JSONObject obj) {
-                    try {
-                        String artworkUrl = obj.getString("artwork_url");
-                        if (artworkUrl.equals("null")) {
-                            artworkUrl = obj.getJSONObject("user").getString("avatar_url");
-                        }
-                        artworkUrl = artworkUrl.replace("-large.", "-t500x500.");
-                        albumArt.setImageUrl(
-                                Api.getInstance(getApplicationContext()).getApiUrlWithParams(
-                                        artworkUrl),
-                                Api.getInstance(getApplicationContext()).getImageLoader());
-                        songName.setText(obj.getString("title"));
-                        artistName.setText(obj.getJSONObject("user").getString("username"));
-                    } catch (Exception e) {
-                        Log.d(TAG, e.getMessage());
+    @Override
+    public void onMusicServiceConnected() {
+        super.onMusicServiceConnected();
+        musicPlayerService.setInfoListener(new MusicPlayerService.InfoListener() {
+            @Override
+            public void onInfo(JSONObject obj) {
+                try {
+                    String artworkUrl = obj.getString("artwork_url");
+                    if (artworkUrl.equals("null")) {
+                        artworkUrl = obj.getJSONObject("user").getString("avatar_url");
+                    }
+                    artworkUrl = artworkUrl.replace("-large.", "-t500x500.");
+                    albumArt.setImageUrl(
+                            Api.getInstance(getApplicationContext()).getApiUrlWithParams(
+                                    artworkUrl),
+                            Api.getInstance(getApplicationContext()).getImageLoader());
+                    songName.setText(obj.getString("title"));
+                    artistName.setText(obj.getJSONObject("user").getString("username"));
+                } catch (Exception e) {
+                    Log.d(TAG, e.getMessage());
+                }
+            }
+        });
+        musicPlayerService.requestInfo();
+        musicPlayerService.setProgressListener(new MusicPlayerService.ProgressListener() {
+            @Override
+            public void onProgress(int progress, int duration, boolean playing) {
+                if (!seeking) {
+                    seekBar.setMax(duration);
+                    seekBar.setProgress(progress);
+                }
+                if (currentlyPlaying != playing) {
+                    if (playing) {
+                        playpause.setImageDrawable(ContextCompat.getDrawable(
+                                getApplicationContext(), R.drawable.ic_pause_white_48dp));
+                        currentlyPlaying = true;
+                    } else {
+                        playpause.setImageDrawable(ContextCompat.getDrawable(
+                                getApplicationContext(), R.drawable.ic_play_arrow_white_48dp));
+                        currentlyPlaying = false;
                     }
                 }
-            });
-            musicPlayerService.requestInfo();
-            musicPlayerService.setProgressListener(new MusicPlayerService.ProgressListener() {
-                @Override
-                public void onProgress(int progress, int duration, boolean playing) {
-                    if (!seeking) {
-                        seekBar.setMax(duration);
-                        seekBar.setProgress(progress);
-                    }
-                    if (currentlyPlaying != playing) {
-                        if (playing) {
-                            playpause.setImageDrawable(ContextCompat.getDrawable(
-                                    getApplicationContext(), R.drawable.ic_pause_white_48dp));
-                            currentlyPlaying = true;
-                        } else {
-                            playpause.setImageDrawable(ContextCompat.getDrawable(
-                                    getApplicationContext(), R.drawable.ic_play_arrow_white_48dp));
-                            currentlyPlaying = false;
-                        }
-                    }
-                }
-            });
-            musicPlayerService.setBufferingListener(new MediaPlayer.OnBufferingUpdateListener() {
-                @Override
-                public void onBufferingUpdate(MediaPlayer mp, int percent) {
-                    seekBar.setSecondaryProgress(seekBar.getMax() * percent / 100);
-                }
-            });
-            previous.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    musicPlayerService.getPrevious();
-                }
-            });
-            next.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    seekBar.setProgress(0);
-                    musicPlayerService.getNext();
-                }
-            });
-            playpause.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    musicPlayerService.playPause();
-                }
-            });
-            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                private int seekProgress = 0;
+            }
+        });
+        musicPlayerService.setBufferingListener(new MediaPlayer.OnBufferingUpdateListener() {
+            @Override
+            public void onBufferingUpdate(MediaPlayer mp, int percent) {
+                seekBar.setSecondaryProgress(seekBar.getMax() * percent / 100);
+            }
+        });
+        previous.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                musicPlayerService.getPrevious();
+            }
+        });
+        next.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                seekBar.setProgress(0);
+                musicPlayerService.getNext();
+            }
+        });
+        playpause.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                musicPlayerService.playPause();
+            }
+        });
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            private int seekProgress = 0;
 
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (fromUser) {
-                        seekProgress = progress;
-                    }
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    seekProgress = progress;
                 }
+            }
 
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-                    seekProgress = 0;
-                    musicPlayerService.pause();
-                    seeking = true;
-                }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                seekProgress = 0;
+                musicPlayerService.pause();
+                seeking = true;
+            }
 
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    musicPlayerService.seekTo(seekProgress);
-                    musicPlayerService.play();
-                    seeking = false;
-                }
-            });
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            musicPlayerService = null;
-        }
-    };
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                musicPlayerService.seekTo(seekProgress);
+                musicPlayerService.play();
+                seeking = false;
+            }
+        });
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -152,19 +141,12 @@ public class MusicPlayerActivity extends AppCompatActivity {
         songName = (TextView) findViewById(R.id.musicPlayerSongName);
         artistName = (TextView) findViewById(R.id.musicPlayerArtistName);
 
-        if(musicPlayerServiceIntent == null) {
-            musicPlayerServiceIntent = new Intent(this, MusicPlayerService.class);
-            bindService(musicPlayerServiceIntent, musicPlayerServiceConnection, Context.BIND_AUTO_CREATE);
-            startService(musicPlayerServiceIntent);
-        }
-
         Log.d(TAG, "onCreate");
     }
 
     @Override
     protected void onDestroy() {
         musicPlayerService.unsetProgressListener();
-        unbindService(musicPlayerServiceConnection);
         super.onDestroy();
     }
 }
