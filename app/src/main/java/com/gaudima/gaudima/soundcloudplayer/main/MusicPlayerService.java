@@ -50,24 +50,28 @@ public class MusicPlayerService extends Service implements
         void onProgress(int progress, int duration, boolean playing);
     }
 
-    public  interface PlaybackListener {
-        void onStarted(int index);
-        void onStopped(int index);
+    public  interface StateListener {
+        void onStateChanged(int index, int state);
     }
 
     public interface InfoListener {
         void onInfo(JSONObject obj);
     }
 
+    public final static int BUFFERING = 0;
+    public final static int PLAYING = 1;
+    public final static int STOPPED = 2;
+
+    private int currentState;
+
     private ProgressListener progressListener;
     private InfoListener infoListener;
-    private PlaybackListener playbackListener;
+    private StateListener stateListener;
 
     private MBinder binder = new MBinder();
     private MediaPlayer player;
     private JSONArray playlist;
     private int currentSong = -1;
-    private boolean preparing = true;
     private Handler handler = new Handler();
     private boolean background = false;
 
@@ -139,14 +143,14 @@ public class MusicPlayerService extends Service implements
                     break;
                 case STOPSERVICE:
                     stopForeground(true);
-                    stopService(new Intent(getApplicationContext(), MusicPlayerService.class));
+                    stopSelf();
             }
         }
         return START_NOT_STICKY;
     }
 
     public void getPrevious() {
-        if(!preparing && player.getCurrentPosition() > 3000) {
+        if(currentState != BUFFERING && player.getCurrentPosition() > 3000) {
             seekTo(0);
         } else {
             if(currentSong > 0) {
@@ -171,12 +175,16 @@ public class MusicPlayerService extends Service implements
         infoListener = info;
     }
 
-    public void setPlaybackListener(PlaybackListener playback) {
-        playbackListener = playback;
+    public void setPlaybackListener(StateListener state) {
+        stateListener = state;
     }
 
     public void setPlaylist(JSONArray pl) {
         playlist = pl;
+    }
+
+    public void setBufferingListener(MediaPlayer.OnBufferingUpdateListener listener) {
+        player.setOnBufferingUpdateListener(listener);
     }
 
     public void requestInfo() {
@@ -191,7 +199,7 @@ public class MusicPlayerService extends Service implements
 
     public void requestProgress() {
         if(progressListener != null) {
-            if(!preparing) {
+            if(currentState != BUFFERING) {
                 progressListener.onProgress(player.getCurrentPosition(), player.getDuration(), player.isPlaying());
             } else {
                 progressListener.onProgress(0, 10, true);
@@ -199,16 +207,22 @@ public class MusicPlayerService extends Service implements
         }
     }
 
+    public void requestStateInfo() {
+        if(currentSong != -1) {
+            stateListener.onStateChanged(currentSong, currentState);
+        }
+    }
+
     public void playSong() {
         try {
-            preparing = true;
+            currentState = BUFFERING;
+            stateListener.onStateChanged(currentSong, currentState);
             player.reset();
             player.setDataSource(Api.getInstance(getApplicationContext()).getApiUrlWithParams(
                     playlist.getJSONObject(currentSong).getString("stream_url")
             ));
             player.prepareAsync();
             requestInfo();
-            playbackListener.onStarted(currentSong);
             upadteNotification();
         } catch(Exception e) {
             Log.d(TAG, e.getMessage());
@@ -217,7 +231,8 @@ public class MusicPlayerService extends Service implements
 
     public void setSong(int index) {
         if(currentSong != -1) {
-            playbackListener.onStopped(currentSong);
+            currentState = STOPPED;
+            stateListener.onStateChanged(currentSong, currentState);
         }
         currentSong = index;
     }
@@ -264,7 +279,7 @@ public class MusicPlayerService extends Service implements
         if(background && player.isPlaying()) {
             startForeground(100, getNotification());
         } else {
-            stopService(new Intent(this, MediaPlayer.class));
+            stopSelf();
         }
     }
 
@@ -307,7 +322,8 @@ public class MusicPlayerService extends Service implements
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        preparing = false;
+        currentState = PLAYING;
+        stateListener.onStateChanged(currentSong, currentState);
         mp.start();
         upadteNotification();
     }
@@ -336,7 +352,8 @@ public class MusicPlayerService extends Service implements
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-        playbackListener.onStarted(currentSong);
+        currentState = STOPPED;
+        stateListener.onStateChanged(currentSong, currentState);
         getNext();
     }
 

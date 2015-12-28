@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Resources;
+import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.CardView;
@@ -37,7 +38,7 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
     private MusicPlayerService musicPlayerService;
     private Context context;
     private MenuItem playerPage;
-    private PopularSongsActivity popularSongsActivity;
+    private boolean boundToMusicPlayerService = false;
 
     public boolean loading = false;
 
@@ -46,19 +47,20 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             MusicPlayerService.MBinder binder = (MusicPlayerService.MBinder)service;
-            //get service
+            boundToMusicPlayerService = true;
             musicPlayerService = binder.getService();
-            musicPlayerService.setPlaybackListener(new MusicPlayerService.PlaybackListener() {
+            musicPlayerService.setPlaybackListener(new MusicPlayerService.StateListener() {
                 @Override
-                public void onStarted(int index) {
-                    notifyItemChanged(index);
-                    playerPage.setVisible(true);
-                }
+                public void onStateChanged(int index, int state) {
+                    try {
+                        data.getJSONObject(index).put("playing_status", state);
+                        notifyItemChanged(index);
+                        if (state != MusicPlayerService.STOPPED) {
+                            playerPage.setVisible(true);
+                        }
+                    } catch (Exception e) {
 
-                @Override
-                public void onStopped(int index) {
-                    notifyItemChanged(index);
-                    playerPage.setVisible(false);
+                    }
                 }
             });
             musicPlayerService.closeNotification();
@@ -66,6 +68,7 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
+            boundToMusicPlayerService = false;
             musicPlayerService = null;
         }
     };
@@ -111,7 +114,7 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
     @Override
     public void onBindViewHolder(ViewHolder holder, final int position) {
         try {
-            JSONObject obj = data.getJSONObject(position);
+            final JSONObject obj = data.getJSONObject(position);
 
             String artworkUrl = obj.getString("artwork_url");
             if(artworkUrl.equals("null")) {
@@ -123,8 +126,10 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
             holder.albumArt.getLayoutParams().width = 300;
             holder.songName.setText(obj.getString("title"));
             holder.songArtist.setText(obj.getJSONObject("user").getString("username"));
-            if(musicPlayerService.getCurrentSong() == position) {
+            if(obj.getInt("playing_status") == MusicPlayerService.PLAYING) {
                 holder.playing.setText(context.getString(R.string.playing));
+            } else if(obj.getInt("playing_status") == MusicPlayerService.BUFFERING) {
+                holder.playing.setText(context.getString(R.string.buffering));
             } else {
                 holder.playing.setText("");
             }
@@ -133,7 +138,7 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
                 public void onClick(View v) {
                     try {
                         if (musicPlayerService != null) {
-                            if(musicPlayerService.getCurrentSong() == position) {
+                            if(obj.getInt("playing_status") != MusicPlayerService.STOPPED) {
                                 context.startActivity(new Intent(context, MusicPlayerActivity.class));
                             } else {
                                 musicPlayerService.setPlaylist(data);
@@ -178,14 +183,18 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
                             JSONArray tracks = response.getJSONArray("tracks");
                             int from = data.length();
                             for (int i = 0; i < tracks.length(); i++) {
-                                data.put(tracks.get(i));
+                                JSONObject track = tracks.getJSONObject(i);
+                                track.put("playing_status",
+                                        MusicPlayerService.STOPPED);
+                                data.put(track);
                                 notifyItemInserted(data.length() - 1);
                             }
-                            if(musicPlayerService != null) {
+                            if (musicPlayerService != null) {
                                 musicPlayerService.setPlaylist(data);
                             }
                             Log.d(TAG, data.toString());
                             offset += 50;
+                            musicPlayerService.requestStateInfo();
                         } catch (Exception e) {
 
                         } finally {
@@ -204,7 +213,9 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
 
     public void unbindFromMusicPlayerService() {
         musicPlayerService.openNotification();
-        context.unbindService(musicPlayerServiceConnection);
+        if(boundToMusicPlayerService) {
+            context.unbindService(musicPlayerServiceConnection);
+        }
     }
 
     public JSONArray getData() {

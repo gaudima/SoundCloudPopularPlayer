@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.content.ContextCompat;
@@ -80,6 +81,12 @@ public class MusicPlayerActivity extends AppCompatActivity {
                             currentlyPlaying = false;
                         }
                     }
+                }
+            });
+            musicPlayerService.setBufferingListener(new MediaPlayer.OnBufferingUpdateListener() {
+                @Override
+                public void onBufferingUpdate(MediaPlayer mp, int percent) {
+                    seekBar.setSecondaryProgress(seekBar.getMax() * percent / 100);
                 }
             });
             previous.setOnClickListener(new View.OnClickListener() {
