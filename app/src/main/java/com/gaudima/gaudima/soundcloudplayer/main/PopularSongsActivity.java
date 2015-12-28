@@ -17,10 +17,12 @@ import android.view.View;
 
 import com.gaudima.gaudima.soundcloudplayer.R;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class PopularSongsActivity extends AppCompatActivity {
     private static final String TAG = "PopularSongsActivity";
+    private static final String DATA = "data";
     private RecyclerView recyclerView;
     private PopularSongsAdapter adapter;
     private LinearLayoutManager layoutManager;
@@ -37,12 +39,15 @@ public class PopularSongsActivity extends AppCompatActivity {
         recyclerView.setHasFixedSize(true);
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-
+        adapter = new PopularSongsAdapter(this);
         if(savedInstanceState == null) {
-            adapter = new PopularSongsAdapter(this);
             adapter.getSongs();
         } else {
-            adapter = (PopularSongsAdapter) getLastCustomNonConfigurationInstance();
+            try {
+                adapter.setData(new JSONArray(savedInstanceState.getString(DATA)));
+            } catch(Exception e) {
+                Log.d(TAG, e.getMessage());
+            }
         }
 
         recyclerView.setAdapter(adapter);
@@ -84,9 +89,16 @@ public class PopularSongsActivity extends AppCompatActivity {
         });
     }
 
+//    @Override
+//    public Object onRetainCustomNonConfigurationInstance() {
+//        Log.d(TAG, "retain adapter");
+//        return adapter;
+//    }
+
     @Override
-    public Object onRetainCustomNonConfigurationInstance() {
-        return adapter;
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(DATA, adapter.getData().toString());
     }
 
     @Override

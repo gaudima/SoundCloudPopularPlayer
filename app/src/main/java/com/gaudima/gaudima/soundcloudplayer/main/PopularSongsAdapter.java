@@ -49,20 +49,21 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
             MusicPlayerService.MBinder binder = (MusicPlayerService.MBinder)service;
             boundToMusicPlayerService = true;
             musicPlayerService = binder.getService();
-            musicPlayerService.setPlaybackListener(new MusicPlayerService.StateListener() {
+            musicPlayerService.setStateListener(new MusicPlayerService.StateListener() {
                 @Override
                 public void onStateChanged(int index, int state) {
                     try {
                         data.getJSONObject(index).put("playing_status", state);
                         notifyItemChanged(index);
-                        if (state != MusicPlayerService.STOPPED) {
-                            playerPage.setVisible(true);
-                        }
+                        playerPage.setVisible(true);
                     } catch (Exception e) {
 
                     }
                 }
             });
+            if(data.length() != 0) {
+                musicPlayerService.requestStateInfo();
+            }
             musicPlayerService.closeNotification();
         }
 
@@ -226,6 +227,15 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
     public void closeNotification() {
         if(boundToMusicPlayerService) {
             musicPlayerService.closeNotification();
+        }
+    }
+
+    public void setData(JSONArray data) {
+        this.data = data;
+        if(musicPlayerService != null) {
+            if(musicPlayerService.getCurrentSong() != -1) {
+                playerPage.setVisible(true);
+            }
         }
     }
 

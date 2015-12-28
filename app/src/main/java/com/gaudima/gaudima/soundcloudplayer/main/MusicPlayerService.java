@@ -62,7 +62,7 @@ public class MusicPlayerService extends Service implements
     public final static int PLAYING = 1;
     public final static int STOPPED = 2;
 
-    private int currentState;
+    private int currentState = STOPPED;
 
     private ProgressListener progressListener;
     private InfoListener infoListener;
@@ -175,7 +175,7 @@ public class MusicPlayerService extends Service implements
         infoListener = info;
     }
 
-    public void setPlaybackListener(StateListener state) {
+    public void setStateListener(StateListener state) {
         stateListener = state;
     }
 
@@ -359,7 +359,9 @@ public class MusicPlayerService extends Service implements
 
     @Override
     public void onDestroy() {
-        player.stop();
+        if(currentState != STOPPED) {
+            player.stop();
+        }
         player.release();
         Log.d(TAG, "onDestroy");
         super.onDestroy();
