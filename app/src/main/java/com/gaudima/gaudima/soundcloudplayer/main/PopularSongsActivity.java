@@ -110,6 +110,18 @@ public class PopularSongsActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        adapter.closeNotification();
+    }
+
+    @Override
+    protected void onPause() {
+        adapter.openNotification();
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy");
         adapter.unbindFromMusicPlayerService();

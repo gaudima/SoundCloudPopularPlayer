@@ -212,9 +212,20 @@ public class PopularSongsAdapter extends RecyclerView.Adapter<PopularSongsAdapte
     }
 
     public void unbindFromMusicPlayerService() {
-        musicPlayerService.openNotification();
         if(boundToMusicPlayerService) {
             context.unbindService(musicPlayerServiceConnection);
+        }
+    }
+
+    public void openNotification() {
+        if(boundToMusicPlayerService) {
+            musicPlayerService.openNotification();
+        }
+    }
+
+    public void closeNotification() {
+        if(boundToMusicPlayerService) {
+            musicPlayerService.closeNotification();
         }
     }
 
